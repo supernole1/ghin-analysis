@@ -66,8 +66,43 @@ async function apiRequest(path, options = {}) {
 
 // ── Authentication ─────────────────────────────────────────────────
 
+// GHIN requires a Firebase Installation token before login
+async function getFirebaseToken() {
+  // Generate a random 22-char base64url FID
+  const bytes = new Uint8Array(17);
+  crypto.getRandomValues(bytes);
+  const fid = btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    .slice(0, 22);
+
+  const res = await fetch(
+    'https://firebaseinstallations.googleapis.com/v1/projects/ghin-mobile-app/installations',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': 'AIzaSyBxgTOAWxiud0HuaE5tN-5NTlzFnrtyz-I',
+      },
+      body: JSON.stringify({
+        fid: fid,
+        appId: '1:884417644529:web:47fb315bc6c70242f72650',
+        authVersion: 'FIS_v2',
+        sdkVersion: 'w:0.5.7',
+      }),
+    }
+  );
+
+  if (!res.ok) throw new Error('Failed to initialize session');
+
+  const data = await res.json();
+  return data.authToken?.token || data.token;
+}
+
 async function login(ghinNumber, password) {
-  // The GHIN API login endpoint
+  // Step 1: Get Firebase Installation token
+  const firebaseToken = await getFirebaseToken();
+
+  // Step 2: Login with GHIN credentials + Firebase token
   const data = await apiRequest('/golfer_login.json', {
     method: 'POST',
     body: JSON.stringify({
@@ -75,6 +110,7 @@ async function login(ghinNumber, password) {
         email_or_ghin: ghinNumber,
         password: password,
         remember_me: false,
+        token: firebaseToken,
       },
     }),
   });

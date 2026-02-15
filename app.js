@@ -257,15 +257,19 @@ function computeHoleStats(scores, courseId) {
   const stats = Object.values(holes)
     .sort((a, b) => a.hole - b.hole)
     .map((h) => {
-      const avg = h.scores.reduce((s, v) => s + v, 0) / h.scores.length;
+      const n = h.scores.length;
+      const avg = h.scores.reduce((s, v) => s + v, 0) / n;
+      const variance = h.scores.reduce((s, v) => s + (v - avg) ** 2, 0) / n;
+      const stdDev = Math.sqrt(variance);
       return {
         hole: h.hole,
         par: h.par,
         avg: Math.round(avg * 100) / 100,
         vsPar: Math.round((avg - h.par) * 100) / 100,
+        stdDev: Math.round(stdDev * 100) / 100,
         best: Math.min(...h.scores),
         worst: Math.max(...h.scores),
-        rounds: h.scores.length,
+        rounds: n,
       };
     });
 
@@ -298,6 +302,7 @@ function renderTable(stats) {
       <td>${h.par}</td>
       <td>${h.avg.toFixed(1)}</td>
       <td class="${vsParClass(h.vsPar)}">${formatVsPar(h.vsPar)}</td>
+      <td>${h.stdDev.toFixed(2)}</td>
       <td>${h.best}</td>
       <td>${h.worst}</td>
       <td>${h.rounds}</td>
@@ -310,18 +315,69 @@ function renderTable(stats) {
     totalWorst += h.worst;
   }
 
-  // Totals row
+  // Totals row — compute pooled std dev across all holes
+  const allScoresFlat = stats.flatMap((h) =>
+    Array(h.rounds).fill(0).map((_, i) => h.avg)
+  );
   const totalVsPar = totalAvg - totalPar;
   statsTotals.innerHTML = `
     <td>Total</td>
     <td>${totalPar}</td>
     <td>${totalAvg.toFixed(1)}</td>
     <td class="${vsParClass(totalVsPar)}">${formatVsPar(totalVsPar)}</td>
+    <td></td>
     <td>${totalBest}</td>
     <td>${totalWorst}</td>
     <td>${stats.length > 0 ? stats[0].rounds : 0}</td>
   `;
 }
+
+// Chart.js plugin: draw ±1 std dev error bars on each bar
+const errorBarPlugin = {
+  id: 'errorBars',
+  afterDatasetsDraw(chart) {
+    const meta = chart.getDatasetMeta(0);
+    const ctx = chart.ctx;
+    const stdDevs = chart._stdDevData;
+    if (!stdDevs) return;
+
+    const yScale = chart.scales.y;
+
+    ctx.save();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1.5;
+
+    meta.data.forEach((bar, i) => {
+      const sd = stdDevs[i];
+      if (!sd) return;
+
+      const x = bar.x;
+      const yTop = yScale.getPixelForValue(bar.$context.raw + sd);
+      const yBot = yScale.getPixelForValue(bar.$context.raw - sd);
+      const capW = 6;
+
+      // Vertical line
+      ctx.beginPath();
+      ctx.moveTo(x, yTop);
+      ctx.lineTo(x, yBot);
+      ctx.stroke();
+
+      // Top cap
+      ctx.beginPath();
+      ctx.moveTo(x - capW, yTop);
+      ctx.lineTo(x + capW, yTop);
+      ctx.stroke();
+
+      // Bottom cap
+      ctx.beginPath();
+      ctx.moveTo(x - capW, yBot);
+      ctx.lineTo(x + capW, yBot);
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  },
+};
 
 function renderChart(stats) {
   if (chartInstance) {
@@ -331,6 +387,7 @@ function renderChart(stats) {
   const ctx = document.getElementById('score-chart').getContext('2d');
   const labels = stats.map((h) => `H${h.hole}`);
   const vsParData = stats.map((h) => h.vsPar);
+  const stdDevData = stats.map((h) => h.stdDev);
 
   const colors = vsParData.map((v) =>
     v > 0 ? 'rgba(192, 57, 43, 0.7)' : v < 0 ? 'rgba(39, 174, 96, 0.7)' : 'rgba(136, 136, 136, 0.7)'
@@ -351,6 +408,7 @@ function renderChart(stats) {
         borderWidth: 1,
       }],
     },
+    plugins: [errorBarPlugin],
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -358,9 +416,12 @@ function renderChart(stats) {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: (ctx) => {
-              const h = stats[ctx.dataIndex];
-              return `Avg: ${h.avg.toFixed(1)} (Par ${h.par}, ${formatVsPar(h.vsPar)})`;
+            label: (tipCtx) => {
+              const h = stats[tipCtx.dataIndex];
+              return [
+                `Avg: ${h.avg.toFixed(1)} (Par ${h.par}, ${formatVsPar(h.vsPar)})`,
+                `Std Dev: ${h.stdDev.toFixed(2)}`,
+              ];
             },
           },
         },
@@ -376,6 +437,9 @@ function renderChart(stats) {
       },
     },
   });
+
+  // Attach std dev data for the plugin
+  chartInstance._stdDevData = stdDevData;
 }
 
 function populateCourseDropdown(courses) {

@@ -92,15 +92,22 @@ async function getFirebaseToken() {
     }
   );
 
-  if (!res.ok) throw new Error('Failed to initialize session');
+  if (!res.ok) {
+    console.error('Firebase response status:', res.status);
+    throw new Error('Failed to initialize session');
+  }
 
   const data = await res.json();
-  return data.authToken?.token || data.token;
+  console.log('Firebase response:', JSON.stringify(data, null, 2));
+  const fbToken = data.authToken?.token || data.token;
+  if (!fbToken) throw new Error('No token in Firebase response');
+  return fbToken;
 }
 
 async function login(ghinNumber, password) {
   // Step 1: Get Firebase Installation token
   const firebaseToken = await getFirebaseToken();
+  console.log('Firebase token obtained:', firebaseToken ? 'yes' : 'no');
 
   // Step 2: Login with GHIN credentials + Firebase token
   const data = await apiRequest('/golfer_login.json', {
@@ -110,8 +117,8 @@ async function login(ghinNumber, password) {
         email_or_ghin: ghinNumber,
         password: password,
         remember_me: false,
-        token: firebaseToken,
       },
+      token: firebaseToken,
     }),
   });
 

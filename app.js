@@ -122,9 +122,9 @@ async function login(ghinNumber, password) {
     }),
   });
 
-  // Extract token and golfer info from response
-  // The response shape: { golfer_user: { golfer_user_token: "...", golfer_user_id: ... } }
-  // or possibly: { token: "...", golfer: { ... } }
+  // Log the full response so we can see the actual field names
+  console.log('Login response:', JSON.stringify(data, null, 2));
+
   if (data.golfer_user) {
     token = data.golfer_user.golfer_user_token;
     golferId = data.golfer_user.golfer_user_id;

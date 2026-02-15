@@ -290,7 +290,57 @@ function vsParClass(val) {
   return 'even-par';
 }
 
+// ── Table Sorting ──────────────────────────────────────────────────
+
+const sortColumns = ['hole', 'par', 'avg', 'vsPar', 'stdDev', 'best', 'worst', 'rounds'];
+let currentSortCol = null;
+let currentSortAsc = true;
+let currentStats = [];
+
+function initSortableHeaders() {
+  const headers = document.querySelectorAll('#stats-table thead th');
+  headers.forEach((th, i) => {
+    th.style.cursor = 'pointer';
+    th.addEventListener('click', () => {
+      const col = sortColumns[i];
+      if (currentSortCol === col) {
+        currentSortAsc = !currentSortAsc;
+      } else {
+        currentSortCol = col;
+        currentSortAsc = true;
+      }
+      const sorted = [...currentStats].sort((a, b) =>
+        currentSortAsc ? a[col] - b[col] : b[col] - a[col]
+      );
+      renderTableRows(sorted);
+      updateSortIndicators(headers, i);
+    });
+  });
+}
+
+function updateSortIndicators(headers, activeIndex) {
+  headers.forEach((th, i) => {
+    // Strip existing indicator
+    th.textContent = th.textContent.replace(/ [▲▼]$/, '');
+    if (i === activeIndex) {
+      th.textContent += currentSortAsc ? ' ▲' : ' ▼';
+    }
+  });
+}
+
 function renderTable(stats) {
+  currentStats = stats;
+  currentSortCol = null;
+  currentSortAsc = true;
+  // Reset sort indicators
+  const headers = document.querySelectorAll('#stats-table thead th');
+  headers.forEach((th) => {
+    th.textContent = th.textContent.replace(/ [▲▼]$/, '');
+  });
+  renderTableRows(stats);
+}
+
+function renderTableRows(stats) {
   statsBody.innerHTML = '';
 
   let totalPar = 0, totalAvg = 0, totalBest = 0, totalWorst = 0;
@@ -315,10 +365,6 @@ function renderTable(stats) {
     totalWorst += h.worst;
   }
 
-  // Totals row — compute pooled std dev across all holes
-  const allScoresFlat = stats.flatMap((h) =>
-    Array(h.rounds).fill(0).map((_, i) => h.avg)
-  );
   const totalVsPar = totalAvg - totalPar;
   statsTotals.innerHTML = `
     <td>Total</td>
@@ -328,9 +374,12 @@ function renderTable(stats) {
     <td></td>
     <td>${totalBest}</td>
     <td>${totalWorst}</td>
-    <td>${stats.length > 0 ? stats[0].rounds : 0}</td>
+    <td>${currentStats.length > 0 ? currentStats[0].rounds : 0}</td>
   `;
 }
+
+// Initialize sortable headers on load
+initSortableHeaders();
 
 // Chart.js plugin: draw ±1 std dev error bars on each bar
 const errorBarPlugin = {

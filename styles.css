@@ -169,6 +169,13 @@ th {
   color: #555;
   position: sticky;
   top: 0;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+th:hover {
+  background: #e2e5ea;
 }
 
 tbody tr:hover {

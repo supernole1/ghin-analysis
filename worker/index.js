@@ -5,7 +5,7 @@ const GHIN_API = 'https://api2.ghin.com/api/v1';
 
 // Set this to your GitHub Pages origin once deployed, e.g.:
 // 'https://<username>.github.io'
-const ALLOWED_ORIGIN = '*'; // TODO: restrict to your GitHub Pages URL
+const ALLOWED_ORIGIN = 'https://supernole1.github.io';
 
 async function handleRequest(request) {
   // Handle CORS preflight

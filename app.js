@@ -174,6 +174,10 @@ async function fetchAllScores() {
     const data = await apiRequest(`/scores.json?${params}`);
 
     const batch = data.scores || [];
+    if (page === 1 && batch.length > 0) {
+      console.log('First score object keys:', Object.keys(batch[0]));
+      console.log('First score object:', JSON.stringify(batch[0], null, 2));
+    }
     scores.push(...batch);
 
     // Stop when we've fetched all scores or got a short page

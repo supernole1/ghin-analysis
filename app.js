@@ -452,7 +452,7 @@ loginForm.addEventListener('submit', async (e) => {
 });
 
 courseSelect.addEventListener('change', () => {
-  const courseId = parseInt(courseSelect.value, 10);
+  const courseId = courseSelect.value;
   if (!courseId) {
     statsSection.hidden = true;
     return;

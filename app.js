@@ -127,13 +127,9 @@ async function login(ghinNumber, password) {
 
   if (data.golfer_user) {
     token = data.golfer_user.golfer_user_token;
-    golferId = data.golfer_user.golfer_user_id;
-    golferName = [data.golfer_user.first_name, data.golfer_user.last_name]
-      .filter(Boolean).join(' ');
-  } else if (data.token) {
-    token = data.token;
-    golferId = data.golfer?.id || ghinNumber;
-    golferName = data.golfer?.name || `GHIN #${ghinNumber}`;
+    golferId = data.golfer_user.golfer_id;
+    const golfer = data.golfer_user.golfers?.[0];
+    golferName = golfer?.player_name || `GHIN #${ghinNumber}`;
   } else {
     throw new Error('Unexpected login response format');
   }

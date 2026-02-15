@@ -1,0 +1,17 @@
+# R script with credentials
+ScrapeGHIN.R
+
+# Environment files
+.env
+.env.*
+
+# R artifacts
+*.Rhistory
+.Rproj.user/
+
+# Node
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db

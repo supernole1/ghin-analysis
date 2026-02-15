@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GHIN Hole-by-Hole Analysis</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body>
+  <header>
+    <h1>GHIN Hole-by-Hole Analysis</h1>
+  </header>
+
+  <main>
+    <!-- Login Section -->
+    <section id="login-section">
+      <h2>Sign In</h2>
+      <form id="login-form">
+        <label for="ghin-number">GHIN Number</label>
+        <input type="text" id="ghin-number" inputmode="numeric" pattern="[0-9]*" required placeholder="e.g. 1234567">
+
+        <label for="password">Password</label>
+        <input type="password" id="password" required>
+
+        <button type="submit" id="login-btn">Sign In</button>
+      </form>
+      <p id="login-error" class="error" hidden></p>
+    </section>
+
+    <!-- Course Selector -->
+    <section id="course-section" hidden>
+      <h2>Select a Course</h2>
+      <div class="user-info">
+        <span id="user-name"></span>
+        <button id="logout-btn" class="link-btn">Sign Out</button>
+      </div>
+      <select id="course-select">
+        <option value="">Loading courses...</option>
+      </select>
+      <p id="course-info" class="muted"></p>
+    </section>
+
+    <!-- Stats View -->
+    <section id="stats-section" hidden>
+      <h2 id="stats-title">Hole-by-Hole Stats</h2>
+
+      <div id="chart-container">
+        <canvas id="score-chart"></canvas>
+      </div>
+
+      <div class="table-wrapper">
+        <table id="stats-table">
+          <thead>
+            <tr>
+              <th>Hole</th>
+              <th>Par</th>
+              <th>Avg Score</th>
+              <th>vs Par</th>
+              <th>Best</th>
+              <th>Worst</th>
+              <th>Rounds</th>
+            </tr>
+          </thead>
+          <tbody id="stats-body"></tbody>
+          <tfoot>
+            <tr id="stats-totals"></tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- Loading Overlay -->
+    <div id="loading" hidden>
+      <div class="spinner"></div>
+      <p id="loading-msg">Loading...</p>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

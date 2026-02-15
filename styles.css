@@ -187,7 +187,11 @@ tfoot td {
 .even-par { color: #888; }
 
 /* Loading overlay */
-#loading {
+#loading[hidden] {
+  display: none;
+}
+
+#loading:not([hidden]) {
   position: fixed;
   inset: 0;
   background: rgba(255,255,255,0.85);

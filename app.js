@@ -9,6 +9,7 @@ let token = null;
 let golferId = null;
 let golferName = '';
 let allScores = [];
+let coursesData = [];
 let chartInstance = null;
 let histogramInstance = null;
 let maInstance = null;
@@ -217,7 +218,6 @@ async function fetchAllScores() {
 }
 
 function extractCourses(scores) {
-  // Build a map of unique courses from scores
   const courseMap = new Map();
 
   for (const score of scores) {
@@ -228,14 +228,16 @@ function extractCourses(scores) {
       courseMap.set(id, {
         id,
         name: score.course_name || score.facility_name || `Course ${id}`,
-        tee: score.tee_name || '',
         roundCount: 0,
+        tees: new Map(), // tee_name → round count
       });
     }
-    courseMap.get(id).roundCount++;
+    const c = courseMap.get(id);
+    c.roundCount++;
+    const tee = score.tee_name || '';
+    c.tees.set(tee, (c.tees.get(tee) || 0) + 1);
   }
 
-  // Sort by number of rounds played (most first)
   return Array.from(courseMap.values())
     .sort((a, b) => b.roundCount - a.roundCount);
 }
@@ -247,10 +249,10 @@ function getHoleDetails(score) {
   return score.hole_details || score.hole_scores || [];
 }
 
-function computeHoleStats(scores, courseId) {
-  // Filter scores for the selected course that have hole-by-hole data
+function computeHoleStats(scores, courseId, tee = null) {
   const courseScores = scores.filter(
     (s) => s.course_id === courseId && getHoleDetails(s).length > 0
+      && (tee === null || (s.tee_name || '') === tee)
   );
 
   if (courseScores.length === 0) return null;
@@ -305,10 +307,11 @@ function computeHoleStats(scores, courseId) {
 
 // ── Round-level Stats ──────────────────────────────────────────────
 
-function computeRoundData(scores, courseId) {
+function computeRoundData(scores, courseId, tee = null) {
   // Returns [{date, total}, ...] sorted oldest→newest, 18-hole valid rounds only
   return scores
-    .filter((s) => s.course_id === courseId && getHoleDetails(s).length === 18)
+    .filter((s) => s.course_id === courseId && getHoleDetails(s).length === 18
+      && (tee === null || (s.tee_name || '') === tee))
     .map((s) => {
       const holes = getHoleDetails(s);
       const strokes = holes.map(h => h.adjusted_gross_score ?? h.raw_score);
@@ -729,6 +732,7 @@ function renderChart(stats) {
 }
 
 function populateCourseDropdown(courses) {
+  coursesData = courses;
   courseSelect.innerHTML = '';
 
   const placeholder = document.createElement('option');
@@ -739,10 +743,68 @@ function populateCourseDropdown(courses) {
   for (const c of courses) {
     const opt = document.createElement('option');
     opt.value = c.id;
-    const teeLabel = c.tee ? ` (${c.tee})` : '';
-    opt.textContent = `${c.name}${teeLabel} — ${c.roundCount} round${c.roundCount !== 1 ? 's' : ''}`;
+    opt.textContent = `${c.name} — ${c.roundCount} round${c.roundCount !== 1 ? 's' : ''}`;
     courseSelect.appendChild(opt);
   }
+}
+
+// ── Tee Filter ─────────────────────────────────────────────────────
+
+function renderTeeFilter(courseId) {
+  const container = document.getElementById('tee-filter');
+  container.innerHTML = '';
+
+  const course = coursesData.find(c => String(c.id) === String(courseId));
+  if (!course || course.tees.size <= 1) return;
+
+  const tees = [...course.tees.entries()].sort((a, b) => b[1] - a[1]);
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'tee-radios';
+
+  const allLabel = document.createElement('label');
+  allLabel.className = 'tee-radio-label';
+  allLabel.innerHTML = `<input type="radio" name="tee-filter" value=""> All Tees`;
+  allLabel.querySelector('input').checked = true;
+  wrapper.appendChild(allLabel);
+
+  for (const [tee, count] of tees) {
+    const label = document.createElement('label');
+    label.className = 'tee-radio-label';
+    label.innerHTML = `<input type="radio" name="tee-filter" value="${tee}"> ${tee || 'Unknown'} <span class="tee-count">(${count})</span>`;
+    wrapper.appendChild(label);
+  }
+
+  container.appendChild(wrapper);
+}
+
+function renderStats(courseId, tee) {
+  const stats = computeHoleStats(allScores, courseId, tee);
+
+  if (!stats || stats.length === 0) {
+    statsSection.hidden = true;
+    courseInfo.textContent = 'No hole-by-hole data available for this course.';
+    return false;
+  }
+
+  renderTable(stats);
+  renderChart(stats);
+
+  const roundData = computeRoundData(allScores, courseId, tee);
+  const roundTotals = roundData.map(r => r.total);
+  const ds = descStats(roundTotals);
+  const roundDistPanel = document.getElementById('round-desc-stats');
+  if (ds) {
+    renderRoundDescStats(ds);
+    renderHistogram(roundTotals);
+    renderMovingAverage(roundData);
+  } else {
+    roundDistPanel.innerHTML = '<p class="muted">No 18-hole round data available for this selection.</p>';
+    if (histogramInstance) { histogramInstance.destroy(); histogramInstance = null; }
+    if (maInstance) { maInstance.destroy(); maInstance = null; }
+  }
+
+  return true;
 }
 
 // ── Event Handlers ─────────────────────────────────────────────────
@@ -805,36 +867,17 @@ courseSelect.addEventListener('change', () => {
   const courseId = courseSelect.value;
   if (!courseId) {
     statsSection.hidden = true;
+    document.getElementById('tee-filter').innerHTML = '';
     return;
   }
 
-  const stats = computeHoleStats(allScores, courseId);
-
-  if (!stats || stats.length === 0) {
-    statsSection.hidden = true;
-    courseInfo.textContent = 'No hole-by-hole data available for this course. Scores may have been posted as totals only.';
-    return;
-  }
-
-  // Find the course name for the title
   const selectedOption = courseSelect.options[courseSelect.selectedIndex];
   const courseName = selectedOption.textContent.split(' — ')[0];
-  statsTitle.textContent = `Hole-by-Hole Stats: ${courseName}`;
+  statsTitle.textContent = courseName;
 
-  renderTable(stats);
-  renderChart(stats);
-
-  const roundData = computeRoundData(allScores, courseId);
-  const roundTotals = roundData.map(r => r.total);
-  const ds = descStats(roundTotals);
-  const roundDistPanel = document.getElementById('round-desc-stats');
-  if (ds) {
-    renderRoundDescStats(ds);
-    renderHistogram(roundTotals);
-    renderMovingAverage(roundData);
-  } else {
-    roundDistPanel.innerHTML = '<p class="muted">No round total data available for this course.</p>';
-  }
+  renderTeeFilter(courseId);
+  const ok = renderStats(courseId, null);
+  if (!ok) return;
 
   // Reset to default tab
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -843,6 +886,13 @@ courseSelect.addEventListener('change', () => {
   document.getElementById('tab-rounds').hidden = false;
 
   statsSection.hidden = false;
+});
+
+document.getElementById('tee-filter').addEventListener('change', (e) => {
+  if (e.target.name !== 'tee-filter') return;
+  const courseId = courseSelect.value;
+  const tee = e.target.value === '' ? null : e.target.value;
+  renderStats(courseId, tee);
 });
 
 // ── Tab switching ──────────────────────────────────────────────────

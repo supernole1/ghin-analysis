@@ -305,6 +305,10 @@ function computeHoleStats(scores, courseId, tee = null) {
         best: Math.min(...h.scores),
         worst: Math.max(...h.scores),
         rounds: n,
+        birdies: h.scores.filter(s => s <= h.par - 1).length,
+        pars:    h.scores.filter(s => s === h.par).length,
+        bogeys:  h.scores.filter(s => s === h.par + 1).length,
+        worse:   h.scores.filter(s => s > h.par + 1).length,
         scores: h.scores,
       };
     });
@@ -539,7 +543,7 @@ function vsParClass(val) {
 
 // ── Table Sorting ──────────────────────────────────────────────────
 
-const sortColumns = ['hole', 'par', 'avg', 'vsPar', 'stdDev', 'best', 'worst', 'rounds'];
+const sortColumns = ['hole', 'par', 'avg', 'vsPar', 'stdDev', 'best', 'worst', 'rounds', 'birdies', 'pars', 'bogeys', 'worse'];
 let currentSortCol = null;
 let currentSortAsc = true;
 let currentStats = [];
@@ -591,6 +595,7 @@ function renderTableRows(stats) {
   statsBody.innerHTML = '';
 
   let totalPar = 0, totalAvg = 0, totalBest = 0, totalWorst = 0;
+  let totalBirdies = 0, totalPars = 0, totalBogeys = 0, totalWorse = 0;
 
   for (const h of stats) {
     const tr = document.createElement('tr');
@@ -603,13 +608,21 @@ function renderTableRows(stats) {
       <td>${h.best}</td>
       <td>${h.worst}</td>
       <td>${h.rounds}</td>
+      <td class="under-par">${h.birdies}</td>
+      <td class="even-par">${h.pars}</td>
+      <td class="over-par">${h.bogeys}</td>
+      <td class="over-par">${h.worse}</td>
     `;
     statsBody.appendChild(tr);
 
-    totalPar += h.par;
-    totalAvg += h.avg;
-    totalBest += h.best;
-    totalWorst += h.worst;
+    totalPar    += h.par;
+    totalAvg    += h.avg;
+    totalBest   += h.best;
+    totalWorst  += h.worst;
+    totalBirdies += h.birdies;
+    totalPars    += h.pars;
+    totalBogeys  += h.bogeys;
+    totalWorse   += h.worse;
   }
 
   const totalVsPar = totalAvg - totalPar;
@@ -622,6 +635,10 @@ function renderTableRows(stats) {
     <td>${totalBest}</td>
     <td>${totalWorst}</td>
     <td>${currentStats.length > 0 ? currentStats[0].rounds : 0}</td>
+    <td class="under-par">${totalBirdies}</td>
+    <td class="even-par">${totalPars}</td>
+    <td class="over-par">${totalBogeys}</td>
+    <td class="over-par">${totalWorse}</td>
   `;
 }
 

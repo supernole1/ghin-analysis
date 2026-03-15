@@ -13,6 +13,7 @@ let coursesData = [];
 let chartInstance = null;
 let histogramInstance = null;
 let maInstance = null;
+let boxPlotInstance = null;
 
 // ── DOM Elements ───────────────────────────────────────────────────
 const loginSection = document.getElementById('login-section');
@@ -176,6 +177,11 @@ function logout() {
     maInstance = null;
   }
 
+  if (boxPlotInstance) {
+    boxPlotInstance.destroy();
+    boxPlotInstance = null;
+  }
+
   loginSection.hidden = false;
   courseSection.hidden = true;
   statsSection.hidden = true;
@@ -299,6 +305,7 @@ function computeHoleStats(scores, courseId, tee = null) {
         best: Math.min(...h.scores),
         worst: Math.max(...h.scores),
         rounds: n,
+        scores: h.scores,
       };
     });
 
@@ -621,6 +628,148 @@ function renderTableRows(stats) {
 // Initialize sortable headers on load
 initSortableHeaders();
 
+// ── Box Plot ───────────────────────────────────────────────────────
+
+function quartile(sorted, q) {
+  const pos = (sorted.length - 1) * q;
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  return sorted[lo] + (pos - lo) * (sorted[hi] - sorted[lo]);
+}
+
+function holeBoxStats(holeObj) {
+  const sorted = [...holeObj.scores].sort((a, b) => a - b);
+  const par = holeObj.par;
+  const q1    = quartile(sorted, 0.25) - par;
+  const med   = quartile(sorted, 0.5)  - par;
+  const q3    = quartile(sorted, 0.75) - par;
+  const iqr   = q3 - q1;
+  const lo    = q1 - 1.5 * iqr;
+  const hi    = q3 + 1.5 * iqr;
+  const vsArr = sorted.map(s => s - par);
+  const inner = vsArr.filter(v => v >= lo && v <= hi);
+  return {
+    q1, median: med, q3,
+    whiskerMin: Math.min(...inner),
+    whiskerMax: Math.max(...inner),
+    outliers: vsArr.filter(v => v < lo || v > hi),
+  };
+}
+
+// Plugin: draws whiskers, median line, and outlier dots over floating bars
+const boxPlotPlugin = {
+  id: 'boxPlotExtras',
+  afterDatasetsDraw(chart) {
+    const extras = chart._boxExtras;
+    if (!extras) return;
+    const ctx = chart.ctx;
+    const yScale = chart.scales.y;
+    const meta = chart.getDatasetMeta(0);
+
+    ctx.save();
+    meta.data.forEach((bar, i) => {
+      const d = extras[i];
+      if (!d) return;
+      const x = bar.x;
+      const hw = bar.width / 2;
+      const cw = hw / 2;
+
+      // Median line (white so it contrasts with box fill)
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2.5;
+      const yMed = yScale.getPixelForValue(d.median);
+      ctx.beginPath(); ctx.moveTo(x - hw, yMed); ctx.lineTo(x + hw, yMed); ctx.stroke();
+
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1.5;
+
+      // Lower whisker
+      const yQ1 = yScale.getPixelForValue(d.q1);
+      const yWLo = yScale.getPixelForValue(d.whiskerMin);
+      ctx.beginPath(); ctx.moveTo(x, yQ1); ctx.lineTo(x, yWLo); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - cw, yWLo); ctx.lineTo(x + cw, yWLo); ctx.stroke();
+
+      // Upper whisker
+      const yQ3 = yScale.getPixelForValue(d.q3);
+      const yWHi = yScale.getPixelForValue(d.whiskerMax);
+      ctx.beginPath(); ctx.moveTo(x, yQ3); ctx.lineTo(x, yWHi); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - cw, yWHi); ctx.lineTo(x + cw, yWHi); ctx.stroke();
+
+      // Outlier dots
+      ctx.fillStyle = '#555';
+      for (const ov of d.outliers) {
+        const yO = yScale.getPixelForValue(ov);
+        ctx.beginPath(); ctx.arc(x, yO, 3, 0, Math.PI * 2); ctx.fill();
+      }
+    });
+    ctx.restore();
+  },
+};
+
+function renderBoxPlot(stats) {
+  if (boxPlotInstance) { boxPlotInstance.destroy(); boxPlotInstance = null; }
+
+  const labels  = stats.map(h => `H${h.hole}`);
+  const extras  = stats.map(holeBoxStats);
+
+  const colors = extras.map(d =>
+    d.median > 0 ? 'rgba(192,57,43,0.65)' : d.median < 0 ? 'rgba(39,174,96,0.65)' : 'rgba(136,136,136,0.65)'
+  );
+  const borders = extras.map(d =>
+    d.median > 0 ? '#c0392b' : d.median < 0 ? '#27ae60' : '#888'
+  );
+
+  const ctx = document.getElementById('boxplot-chart').getContext('2d');
+  boxPlotInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: extras.map(d => [d.q1, d.q3]),   // floating bar Q1→Q3
+        backgroundColor: colors,
+        borderColor: borders,
+        borderWidth: 1.5,
+        barPercentage: 0.5,
+        categoryPercentage: 0.8,
+      }],
+    },
+    plugins: [boxPlotPlugin],
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => `Hole ${stats[items[0].dataIndex].hole} (Par ${stats[items[0].dataIndex].par})`,
+            label: (item) => {
+              const d = extras[item.dataIndex];
+              const h = stats[item.dataIndex];
+              return [
+                `Median:  ${formatVsPar(d.median)}`,
+                `Q1–Q3:  ${formatVsPar(d.q1)} to ${formatVsPar(d.q3)}`,
+                `Whiskers: ${formatVsPar(d.whiskerMin)} to ${formatVsPar(d.whiskerMax)}`,
+                `Outliers: ${d.outliers.length}  |  Rounds: ${h.rounds}`,
+              ];
+            },
+          },
+        },
+      },
+      scales: {
+        y: {
+          min: -1.5,
+          max: 3.5,
+          title: { display: true, text: 'vs Par' },
+          grid: { color: '#eee' },
+        },
+        x: { grid: { display: false } },
+      },
+    },
+  });
+
+  boxPlotInstance._boxExtras = extras;
+}
+
 // Chart.js plugin: draw ±1 std dev error bars on each bar
 const errorBarPlugin = {
   id: 'errorBars',
@@ -791,6 +940,7 @@ function renderStats(courseId, tee) {
 
   renderTable(stats);
   renderChart(stats);
+  renderBoxPlot(stats);
 
   const roundData = computeRoundData(allScores, courseId, tee);
   const roundTotals = roundData.map(r => r.total);
@@ -881,11 +1031,16 @@ courseSelect.addEventListener('change', () => {
   const ok = renderStats(courseId, null);
   if (!ok) return;
 
-  // Reset to default tab
+  // Reset to default tabs
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.hidden = true);
   document.querySelector('.tab-btn[data-tab="tab-rounds"]').classList.add('active');
   document.getElementById('tab-rounds').hidden = false;
+
+  document.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.subtab-panel').forEach(p => p.hidden = true);
+  document.querySelector('.subtab-btn[data-subtab="subtab-basic"]').classList.add('active');
+  document.getElementById('subtab-basic').hidden = false;
 
   statsSection.hidden = false;
 });
@@ -897,7 +1052,16 @@ document.getElementById('tee-filter').addEventListener('change', (e) => {
   renderStats(courseId, tee);
 });
 
-// ── Tab switching ──────────────────────────────────────────────────
+// ── Tab & Sub-tab switching ─────────────────────────────────────────
+
+document.querySelectorAll('.subtab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.subtab-panel').forEach(p => p.hidden = true);
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.subtab).hidden = false;
+  });
+});
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {

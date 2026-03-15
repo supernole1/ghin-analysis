@@ -79,9 +79,24 @@
       <!-- Tab: Hole by Hole -->
       <div id="tab-holes" class="tab-panel" hidden>
         <p class="tab-note">Includes all rounds where hole-by-hole scoring was entered, including 9-hole and partial rounds.</p>
-        <div id="chart-container">
-          <canvas id="score-chart"></canvas>
+
+        <div class="subtab-bar">
+          <button class="subtab-btn active" data-subtab="subtab-basic">Basic</button>
+          <button class="subtab-btn" data-subtab="subtab-detail">Box Plot</button>
         </div>
+
+        <div id="subtab-basic" class="subtab-panel">
+          <div id="chart-container">
+            <canvas id="score-chart"></canvas>
+          </div>
+        </div>
+
+        <div id="subtab-detail" class="subtab-panel" hidden>
+          <div id="boxplot-container">
+            <canvas id="boxplot-chart"></canvas>
+          </div>
+        </div>
+
         <div class="table-wrapper">
           <table id="stats-table">
             <thead>

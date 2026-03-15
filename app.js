@@ -718,7 +718,11 @@ courseSelect.addEventListener('change', () => {
     return;
   }
 
+  console.log('Selected courseId:', courseId, typeof courseId);
+  console.log('Sample score course_ids:', allScores.slice(0,3).map(s => s.course_id + ' (' + typeof s.course_id + ')'));
+
   const stats = computeHoleStats(allScores, courseId);
+  console.log('computeHoleStats result length:', stats ? stats.length : 'null');
 
   if (!stats || stats.length === 0) {
     statsSection.hidden = true;

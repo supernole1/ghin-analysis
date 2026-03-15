@@ -718,6 +718,8 @@ function renderChart(stats) {
       scales: {
         y: {
           title: { display: true, text: 'Avg vs Par' },
+          min: -1.5,
+          max: 3.5,
           grid: { color: '#eee' },
         },
         x: {

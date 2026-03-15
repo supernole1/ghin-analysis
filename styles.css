@@ -222,6 +222,19 @@ select {
   height: 220px;
 }
 
+.chart-subheading {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+  margin: 1.25rem 0 0.5rem;
+}
+
+#ma-container {
+  position: relative;
+  width: 100%;
+  height: 220px;
+}
+
 /* Table */
 .table-wrapper {
   overflow-x: auto;

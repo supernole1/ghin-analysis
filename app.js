@@ -11,6 +11,7 @@ let golferName = '';
 let allScores = [];
 let chartInstance = null;
 let histogramInstance = null;
+let maInstance = null;
 
 // ── DOM Elements ───────────────────────────────────────────────────
 const loginSection = document.getElementById('login-section');
@@ -169,6 +170,11 @@ function logout() {
     histogramInstance = null;
   }
 
+  if (maInstance) {
+    maInstance.destroy();
+    maInstance = null;
+  }
+
   loginSection.hidden = false;
   courseSection.hidden = true;
   statsSection.hidden = true;
@@ -299,16 +305,94 @@ function computeHoleStats(scores, courseId) {
 
 // ── Round-level Stats ──────────────────────────────────────────────
 
-function computeRoundTotals(scores, courseId) {
+function computeRoundData(scores, courseId) {
+  // Returns [{date, total}, ...] sorted oldest→newest, 18-hole valid rounds only
   return scores
     .filter((s) => s.course_id === courseId && getHoleDetails(s).length === 18)
     .map((s) => {
       const holes = getHoleDetails(s);
       const strokes = holes.map(h => h.adjusted_gross_score ?? h.raw_score);
       if (strokes.some(v => v == null || v <= 0)) return null;
-      return strokes.reduce((sum, v) => sum + v, 0);
+      return {
+        date: s.played_at || s.score_date || '',
+        total: strokes.reduce((sum, v) => sum + v, 0),
+      };
     })
-    .filter((t) => t != null);
+    .filter(Boolean)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function computeRoundTotals(scores, courseId) {
+  return computeRoundData(scores, courseId).map(r => r.total);
+}
+
+function renderMovingAverage(roundData, windowSize = 20) {
+  if (maInstance) {
+    maInstance.destroy();
+    maInstance = null;
+  }
+
+  if (roundData.length === 0) return;
+
+  const maPoints = roundData.map((r, i) => {
+    const start = Math.max(0, i - windowSize + 1);
+    const slice = roundData.slice(start, i + 1);
+    const avg = slice.reduce((s, d) => s + d.total, 0) / slice.length;
+    return { x: r.date, y: Math.round(avg * 10) / 10 };
+  });
+
+  const ctx = document.getElementById('ma-chart').getContext('2d');
+  maInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [{
+        label: '20-Round Moving Avg',
+        data: maPoints,
+        borderColor: '#0f3460',
+        backgroundColor: 'rgba(15,52,96,0.08)',
+        borderWidth: 2,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        fill: true,
+        tension: 0.3,
+      }, {
+        label: 'Round Score',
+        data: roundData.map(r => ({ x: r.date, y: r.total })),
+        borderColor: 'rgba(136,136,136,0.4)',
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        pointRadius: 2,
+        pointHoverRadius: 4,
+        fill: false,
+        tension: 0,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      parsing: false,
+      plugins: {
+        legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            title: (items) => items[0].raw.x,
+            label: (item) => `${item.dataset.label}: ${item.raw.y}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          type: 'category',
+          ticks: { maxTicksLimit: 8, maxRotation: 30, font: { size: 10 } },
+          grid: { display: false },
+        },
+        y: {
+          title: { display: true, text: 'Score' },
+          grid: { color: '#eee' },
+        },
+      },
+    },
+  });
 }
 
 function descStats(totals) {
@@ -717,11 +801,7 @@ courseSelect.addEventListener('change', () => {
     return;
   }
 
-  console.log('Selected courseId:', courseId, typeof courseId);
-  console.log('Sample score course_ids:', allScores.slice(0,3).map(s => s.course_id + ' (' + typeof s.course_id + ')'));
-
   const stats = computeHoleStats(allScores, courseId);
-  console.log('computeHoleStats result length:', stats ? stats.length : 'null');
 
   if (!stats || stats.length === 0) {
     statsSection.hidden = true;
@@ -737,15 +817,14 @@ courseSelect.addEventListener('change', () => {
   renderTable(stats);
   renderChart(stats);
 
-  const roundTotals = computeRoundTotals(allScores, courseId);
-  console.log('courseId:', courseId, typeof courseId);
-  console.log('roundTotals:', roundTotals);
+  const roundData = computeRoundData(allScores, courseId);
+  const roundTotals = roundData.map(r => r.total);
   const ds = descStats(roundTotals);
-  console.log('descStats:', ds);
   const roundDistPanel = document.getElementById('round-desc-stats');
   if (ds) {
     renderRoundDescStats(ds);
     renderHistogram(roundTotals);
+    renderMovingAverage(roundData);
   } else {
     roundDistPanel.innerHTML = '<p class="muted">No round total data available for this course.</p>';
   }

@@ -691,6 +691,31 @@ const boxPlotPlugin = {
       const hw = bar.width / 2;
       const cw = hw / 2;
 
+      // Zero-height box (Q1 === Q3): draw a single thick colored line and skip normal box/whisker drawing
+      if (d.q1 === d.q3) {
+        const color = d.median > 0 ? '#c0392b' : d.median < 0 ? '#27ae60' : '#888';
+        const yLine = yScale.getPixelForValue(d.median);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(x - hw, yLine); ctx.lineTo(x + hw, yLine); ctx.stroke();
+        // Still draw whiskers if they differ from the median
+        if (d.whiskerMin !== d.median || d.whiskerMax !== d.median) {
+          ctx.strokeStyle = '#333';
+          ctx.lineWidth = 1.5;
+          if (d.whiskerMin !== d.median) {
+            const yWLo = yScale.getPixelForValue(d.whiskerMin);
+            ctx.beginPath(); ctx.moveTo(x, yLine); ctx.lineTo(x, yWLo); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x - cw, yWLo); ctx.lineTo(x + cw, yWLo); ctx.stroke();
+          }
+          if (d.whiskerMax !== d.median) {
+            const yWHi = yScale.getPixelForValue(d.whiskerMax);
+            ctx.beginPath(); ctx.moveTo(x, yLine); ctx.lineTo(x, yWHi); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x - cw, yWHi); ctx.lineTo(x + cw, yWHi); ctx.stroke();
+          }
+        }
+        return;
+      }
+
       // Median line — dark navy for contrast against the colored box
       ctx.strokeStyle = '#16213e';
       ctx.lineWidth = 2.5;
@@ -762,12 +787,14 @@ function renderBoxPlot(stats) {
             label: (item) => {
               const d = extras[item.dataIndex];
               const h = stats[item.dataIndex];
-              return [
+              const lines = [
                 `Median:  ${formatVsPar(d.median)}`,
                 `Q1–Q3:  ${formatVsPar(d.q1)} to ${formatVsPar(d.q3)}`,
                 `Whiskers: ${formatVsPar(d.whiskerMin)} to ${formatVsPar(d.whiskerMax)}`,
                 `Outliers: ${d.outliers.length}  |  Rounds: ${h.rounds}`,
               ];
+              if (d.q1 === d.q3) lines.push(`(scores too consistent to show a box)`);
+              return lines;
             },
           },
         },

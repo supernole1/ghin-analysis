@@ -301,7 +301,7 @@ function computeHoleStats(scores, courseId) {
 
 function computeRoundTotals(scores, courseId) {
   return scores
-    .filter((s) => s.course_id === courseId && getHoleDetails(s).length > 9)
+    .filter((s) => s.course_id === courseId && getHoleDetails(s).length === 18)
     .map((s) => {
       const total = getHoleDetails(s).reduce((sum, hole) => {
         const strokes = hole.adjusted_gross_score ?? hole.raw_score;

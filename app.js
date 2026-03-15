@@ -334,56 +334,63 @@ function renderMovingAverage(roundData, windowSize = 20) {
 
   if (roundData.length === 0) return;
 
-  const maPoints = roundData.map((r, i) => {
+  // roundData is sorted oldest→newest; compute trailing MA at each point
+  const labels = roundData.map(r => r.date || '');
+  const rawScores = roundData.map(r => r.total);
+  const maScores = rawScores.map((_, i) => {
     const start = Math.max(0, i - windowSize + 1);
-    const slice = roundData.slice(start, i + 1);
-    const avg = slice.reduce((s, d) => s + d.total, 0) / slice.length;
-    return { x: r.date, y: Math.round(avg * 10) / 10 };
+    const slice = rawScores.slice(start, i + 1);
+    const avg = slice.reduce((s, v) => s + v, 0) / slice.length;
+    return Math.round(avg * 10) / 10;
   });
 
   const ctx = document.getElementById('ma-chart').getContext('2d');
   maInstance = new Chart(ctx, {
     type: 'line',
     data: {
-      datasets: [{
-        label: '20-Round Moving Avg',
-        data: maPoints,
-        borderColor: '#0f3460',
-        backgroundColor: 'rgba(15,52,96,0.08)',
-        borderWidth: 2,
-        pointRadius: 3,
-        pointHoverRadius: 5,
-        fill: true,
-        tension: 0.3,
-      }, {
-        label: 'Round Score',
-        data: roundData.map(r => ({ x: r.date, y: r.total })),
-        borderColor: 'rgba(136,136,136,0.4)',
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        pointRadius: 2,
-        pointHoverRadius: 4,
-        fill: false,
-        tension: 0,
-      }],
+      labels,
+      datasets: [
+        {
+          label: 'Round Score',
+          data: rawScores,
+          borderColor: 'rgba(136,136,136,0.5)',
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          pointRadius: 2,
+          pointHoverRadius: 4,
+          fill: false,
+          tension: 0,
+          order: 2,
+        },
+        {
+          label: '20-Round Moving Avg',
+          data: maScores,
+          borderColor: '#0f3460',
+          backgroundColor: 'rgba(15,52,96,0.08)',
+          borderWidth: 2.5,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          fill: true,
+          tension: 0.3,
+          order: 1,
+        },
+      ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      parsing: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
         tooltip: {
           callbacks: {
-            title: (items) => items[0].raw.x,
-            label: (item) => `${item.dataset.label}: ${item.raw.y}`,
+            title: (items) => `Date: ${labels[items[0].dataIndex]}`,
           },
         },
       },
       scales: {
         x: {
-          type: 'category',
-          ticks: { maxTicksLimit: 8, maxRotation: 30, font: { size: 10 } },
+          ticks: { maxTicksLimit: 10, maxRotation: 30, font: { size: 10 } },
           grid: { display: false },
         },
         y: {

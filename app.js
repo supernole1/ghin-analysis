@@ -303,10 +303,13 @@ function computeRoundTotals(scores, courseId) {
   return scores
     .filter((s) => s.course_id === courseId && getHoleDetails(s).length === 18)
     .map((s) => {
-      const total = getHoleDetails(s).reduce((sum, hole) => {
+      const holes = getHoleDetails(s);
+      const total = holes.reduce((sum, hole) => {
         const strokes = hole.adjusted_gross_score ?? hole.raw_score;
         return strokes != null ? sum + strokes : sum;
       }, 0);
+      const nullCount = holes.filter(h => (h.adjusted_gross_score ?? h.raw_score) == null).length;
+      console.log(`Round ${s.played_at || s.score_date || s.id}: total=${total}, holes=${holes.length}, nullScores=${nullCount}`);
       return total;
     })
     .filter((t) => t > 0);

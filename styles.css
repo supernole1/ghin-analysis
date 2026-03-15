@@ -64,6 +64,37 @@ input[type="password"] {
   transition: border-color 0.2s;
 }
 
+.input-with-icon {
+  position: relative;
+  margin-bottom: 0.75rem;
+}
+
+.input-with-icon input {
+  width: 100%;
+  margin-bottom: 0;
+  padding-right: 2.5rem;
+}
+
+#toggle-password {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0;
+  color: #888;
+  display: flex;
+  align-items: center;
+}
+
+#toggle-password:hover { color: #333; }
+
+#toggle-password svg {
+  width: 18px;
+  height: 18px;
+}
+
 input:focus {
   outline: none;
   border-color: #0f3460;
@@ -142,6 +173,53 @@ select {
   width: 100%;
   max-height: 300px;
   margin-bottom: 1.5rem;
+}
+
+/* Round distribution panel */
+#round-dist-panel {
+  margin-bottom: 1.5rem;
+}
+
+#round-dist-panel h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #16213e;
+  margin-bottom: 0.75rem;
+}
+
+#round-desc-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.desc-stat {
+  background: #f0f2f5;
+  border-radius: 6px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.82rem;
+  text-align: center;
+  min-width: 80px;
+}
+
+.desc-stat .stat-label {
+  color: #666;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.desc-stat .stat-value {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #16213e;
+}
+
+#histogram-container {
+  position: relative;
+  width: 100%;
+  max-height: 220px;
 }
 
 /* Table */

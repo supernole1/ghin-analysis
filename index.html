@@ -21,7 +21,15 @@
         <input type="text" id="ghin-number" inputmode="numeric" pattern="[0-9]*" required placeholder="e.g. 1234567">
 
         <label for="password">Password</label>
-        <input type="password" id="password" required>
+        <div class="input-with-icon">
+          <input type="password" id="password" required>
+          <button type="button" id="toggle-password" aria-label="Show password">
+            <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
 
         <button type="submit" id="login-btn">Sign In</button>
       </form>
@@ -47,6 +55,14 @@
 
       <div id="chart-container">
         <canvas id="score-chart"></canvas>
+      </div>
+
+      <div id="round-dist-panel">
+        <h3>Round Score Distribution</h3>
+        <div id="round-desc-stats"></div>
+        <div id="histogram-container">
+          <canvas id="histogram-chart"></canvas>
+        </div>
       </div>
 
       <div class="table-wrapper">

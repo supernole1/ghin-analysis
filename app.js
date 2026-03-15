@@ -10,6 +10,7 @@ let golferId = null;
 let golferName = '';
 let allScores = [];
 let chartInstance = null;
+let histogramInstance = null;
 
 // ── DOM Elements ───────────────────────────────────────────────────
 const loginSection = document.getElementById('login-section');
@@ -105,22 +106,37 @@ async function getFirebaseToken() {
 }
 
 async function login(ghinNumber, password) {
-  // Step 1: Get Firebase Installation token
-  const firebaseToken = await getFirebaseToken();
-  console.log('Firebase token obtained:', firebaseToken ? 'yes' : 'no');
+  // Step 1: Try to get Firebase Installation token (non-fatal if it fails)
+  let firebaseToken = null;
+  try {
+    firebaseToken = await getFirebaseToken();
+    console.log('Firebase token obtained:', firebaseToken ? 'yes' : 'no');
+  } catch (err) {
+    console.warn('Firebase token failed (will try login without it):', err.message);
+  }
 
-  // Step 2: Login with GHIN credentials + Firebase token
-  const data = await apiRequest('/golfer_login.json', {
-    method: 'POST',
-    body: JSON.stringify({
-      user: {
-        email_or_ghin: ghinNumber,
-        password: password,
-        remember_me: false,
-      },
-      token: firebaseToken,
-    }),
-  });
+  // Step 2: Login with GHIN credentials (+ Firebase token if we got one)
+  const body = {
+    user: {
+      email_or_ghin: ghinNumber,
+      password: password,
+      remember_me: false,
+    },
+  };
+  if (firebaseToken) body.token = firebaseToken;
+
+  let data;
+  try {
+    data = await apiRequest('/golfer_login.json', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    if (err.message.includes('Failed to fetch')) {
+      throw new Error('Could not reach the proxy server. Check your internet connection or try again.');
+    }
+    throw err;
+  }
 
   // Log the full response so we can see the actual field names
   console.log('Login response:', JSON.stringify(data, null, 2));
@@ -146,6 +162,11 @@ function logout() {
   if (chartInstance) {
     chartInstance.destroy();
     chartInstance = null;
+  }
+
+  if (histogramInstance) {
+    histogramInstance.destroy();
+    histogramInstance = null;
   }
 
   loginSection.hidden = false;
@@ -274,6 +295,132 @@ function computeHoleStats(scores, courseId) {
     });
 
   return stats;
+}
+
+// ── Round-level Stats ──────────────────────────────────────────────
+
+function computeRoundTotals(scores, courseId) {
+  return scores
+    .filter((s) => s.course_id === courseId && getHoleDetails(s).length > 0)
+    .map((s) => {
+      const total = getHoleDetails(s).reduce((sum, hole) => {
+        const strokes = hole.adjusted_gross_score ?? hole.raw_score;
+        return strokes != null ? sum + strokes : sum;
+      }, 0);
+      return total;
+    })
+    .filter((t) => t > 0);
+}
+
+function descStats(totals) {
+  const n = totals.length;
+  if (n === 0) return null;
+  const sorted = [...totals].sort((a, b) => a - b);
+  const mean = totals.reduce((s, v) => s + v, 0) / n;
+  const median = n % 2 === 0
+    ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
+    : sorted[Math.floor(n / 2)];
+  const variance = totals.reduce((s, v) => s + (v - mean) ** 2, 0) / n;
+  const stdDev = Math.sqrt(variance);
+  return {
+    count: n,
+    mean: Math.round(mean * 10) / 10,
+    median,
+    stdDev: Math.round(stdDev * 100) / 100,
+    min: sorted[0],
+    max: sorted[n - 1],
+  };
+}
+
+function renderRoundDescStats(stats) {
+  const el = document.getElementById('round-desc-stats');
+  const items = [
+    { label: 'Rounds', value: stats.count },
+    { label: 'Mean', value: stats.mean.toFixed(1) },
+    { label: 'Median', value: stats.median },
+    { label: 'Std Dev', value: stats.stdDev.toFixed(2) },
+    { label: 'Best', value: stats.min },
+    { label: 'Worst', value: stats.max },
+    { label: 'Range', value: stats.max - stats.min },
+  ];
+  el.innerHTML = items.map((item) => `
+    <div class="desc-stat">
+      <div class="stat-label">${item.label}</div>
+      <div class="stat-value">${item.value}</div>
+    </div>
+  `).join('');
+}
+
+function renderHistogram(totals) {
+  if (histogramInstance) {
+    histogramInstance.destroy();
+    histogramInstance = null;
+  }
+
+  if (totals.length === 0) return;
+
+  const min = Math.min(...totals);
+  const max = Math.max(...totals);
+  const range = max - min;
+
+  // Choose bin width so we get ~8–12 bins; minimum width of 1
+  const rawBins = Math.ceil(range / 10) || 1;
+  const binWidth = Math.max(1, rawBins);
+
+  // Build bins
+  const binCount = Math.ceil((max - min + 1) / binWidth);
+  const counts = new Array(binCount).fill(0);
+  for (const t of totals) {
+    const idx = Math.floor((t - min) / binWidth);
+    counts[Math.min(idx, binCount - 1)]++;
+  }
+
+  const labels = counts.map((_, i) => {
+    const lo = min + i * binWidth;
+    const hi = lo + binWidth - 1;
+    return binWidth === 1 ? `${lo}` : `${lo}–${hi}`;
+  });
+
+  const ctx = document.getElementById('histogram-chart').getContext('2d');
+  histogramInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Rounds',
+        data: counts,
+        backgroundColor: 'rgba(15, 52, 96, 0.65)',
+        borderColor: '#0f3460',
+        borderWidth: 1,
+        barPercentage: 0.95,
+        categoryPercentage: 1.0,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => `Score: ${items[0].label}`,
+            label: (item) => `${item.raw} round${item.raw !== 1 ? 's' : ''}`,
+          },
+        },
+      },
+      scales: {
+        y: {
+          title: { display: true, text: 'Rounds' },
+          ticks: { stepSize: 1, precision: 0 },
+          grid: { color: '#eee' },
+        },
+        x: {
+          title: { display: true, text: 'Total Score' },
+          grid: { display: false },
+        },
+      },
+    },
+  });
 }
 
 // ── Rendering ──────────────────────────────────────────────────────
@@ -586,7 +733,34 @@ courseSelect.addEventListener('change', () => {
 
   renderTable(stats);
   renderChart(stats);
+
+  const roundTotals = computeRoundTotals(allScores, courseId);
+  const ds = descStats(roundTotals);
+  if (ds) {
+    renderRoundDescStats(ds);
+    renderHistogram(roundTotals);
+  }
+
   statsSection.hidden = false;
 });
 
 logoutBtn.addEventListener('click', logout);
+
+document.getElementById('toggle-password').addEventListener('click', () => {
+  const isPassword = passwordInput.type === 'password';
+  passwordInput.type = isPassword ? 'text' : 'password';
+  const icon = document.getElementById('eye-icon');
+  if (isPassword) {
+    // Eye-off (slash through eye)
+    icon.innerHTML = `
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+      <line x1="1" y1="1" x2="23" y2="23"/>
+    `;
+  } else {
+    icon.innerHTML = `
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+      <circle cx="12" cy="12" r="3"/>
+    `;
+  }
+});

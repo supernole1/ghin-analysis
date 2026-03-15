@@ -735,10 +735,16 @@ courseSelect.addEventListener('change', () => {
   renderChart(stats);
 
   const roundTotals = computeRoundTotals(allScores, courseId);
+  console.log('courseId:', courseId, typeof courseId);
+  console.log('roundTotals:', roundTotals);
   const ds = descStats(roundTotals);
+  console.log('descStats:', ds);
+  const roundDistPanel = document.getElementById('round-desc-stats');
   if (ds) {
     renderRoundDescStats(ds);
     renderHistogram(roundTotals);
+  } else {
+    roundDistPanel.innerHTML = '<p class="muted">No round total data available for this course.</p>';
   }
 
   statsSection.hidden = false;

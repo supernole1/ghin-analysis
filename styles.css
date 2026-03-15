@@ -219,7 +219,7 @@ select {
 #histogram-container {
   position: relative;
   width: 100%;
-  max-height: 220px;
+  height: 220px;
 }
 
 /* Table */

@@ -175,6 +175,37 @@ select {
   margin-bottom: 1.5rem;
 }
 
+/* Tabs */
+.tab-bar {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 2px solid #e0e3e8;
+  margin-bottom: 1.25rem;
+}
+
+.tab-btn {
+  padding: 0.5rem 1.1rem;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #777;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-btn:hover { color: #333; }
+
+.tab-btn.active {
+  color: #0f3460;
+  border-bottom-color: #0f3460;
+  font-weight: 600;
+}
+
+.tab-panel[hidden] { display: none; }
+
 /* Round distribution panel */
 #round-dist-panel {
   margin-bottom: 1.5rem;

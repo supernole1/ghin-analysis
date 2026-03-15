@@ -836,7 +836,24 @@ courseSelect.addEventListener('change', () => {
     roundDistPanel.innerHTML = '<p class="muted">No round total data available for this course.</p>';
   }
 
+  // Reset to default tab
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.hidden = true);
+  document.querySelector('.tab-btn[data-tab="tab-rounds"]').classList.add('active');
+  document.getElementById('tab-rounds').hidden = false;
+
   statsSection.hidden = false;
+});
+
+// ── Tab switching ──────────────────────────────────────────────────
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.hidden = true);
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).hidden = false;
+  });
 });
 
 logoutBtn.addEventListener('click', logout);

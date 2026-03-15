@@ -51,43 +51,53 @@
 
     <!-- Stats View -->
     <section id="stats-section" hidden>
-      <h2 id="stats-title">Hole-by-Hole Stats</h2>
+      <h2 id="stats-title">Stats</h2>
 
-      <div id="chart-container">
-        <canvas id="score-chart"></canvas>
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="tab-rounds">Round Analysis</button>
+        <button class="tab-btn" data-tab="tab-holes">Hole by Hole</button>
       </div>
 
-      <div id="round-dist-panel">
-        <h3>Round Score Distribution</h3>
-        <div id="round-desc-stats"></div>
-        <div id="histogram-container">
-          <canvas id="histogram-chart"></canvas>
-        </div>
-        <h4 class="chart-subheading">20-Round Moving Average</h4>
-        <div id="ma-container">
-          <canvas id="ma-chart"></canvas>
+      <!-- Tab: Round Analysis -->
+      <div id="tab-rounds" class="tab-panel">
+        <div id="round-dist-panel">
+          <div id="round-desc-stats"></div>
+          <h4 class="chart-subheading">Score Distribution</h4>
+          <div id="histogram-container">
+            <canvas id="histogram-chart"></canvas>
+          </div>
+          <h4 class="chart-subheading">20-Round Moving Average</h4>
+          <div id="ma-container">
+            <canvas id="ma-chart"></canvas>
+          </div>
         </div>
       </div>
 
-      <div class="table-wrapper">
-        <table id="stats-table">
-          <thead>
-            <tr>
-              <th>Hole</th>
-              <th>Par</th>
-              <th>Avg Score</th>
-              <th>vs Par</th>
-              <th>Std Dev</th>
-              <th>Best</th>
-              <th>Worst</th>
-              <th>Rounds</th>
-            </tr>
-          </thead>
-          <tbody id="stats-body"></tbody>
-          <tfoot>
-            <tr id="stats-totals"></tr>
-          </tfoot>
-        </table>
+      <!-- Tab: Hole by Hole -->
+      <div id="tab-holes" class="tab-panel" hidden>
+        <div id="chart-container">
+          <canvas id="score-chart"></canvas>
+        </div>
+        <div class="table-wrapper">
+          <table id="stats-table">
+            <thead>
+              <tr>
+                <th>Hole</th>
+                <th>Par</th>
+                <th>Avg Score</th>
+                <th>vs Par</th>
+                <th>Std Dev</th>
+                <th>Best</th>
+                <th>Worst</th>
+                <th>Rounds</th>
+              </tr>
+            </thead>
+            <tbody id="stats-body"></tbody>
+            <tfoot>
+              <tr id="stats-totals"></tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
     </section>
 

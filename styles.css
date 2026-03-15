@@ -256,6 +256,64 @@ select {
 
 .subtab-panel[hidden] { display: none; }
 
+.boxplot-explainer {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: #f8f9fb;
+  border: 1px solid #e0e3e8;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+}
+
+.bp-legend-diagram svg {
+  width: 48px;
+  flex-shrink: 0;
+}
+
+.bp-legend-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+}
+
+.bp-legend-labels > div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #444;
+}
+
+.bp-legend-labels dt {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.bp-legend-labels dd { margin: 0; }
+
+.bp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #555;
+}
+
+.bp-color-key {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  width: 36px;
+  text-align: center;
+}
+
+.bp-color-key.over-par  { color: #c0392b; }
+.bp-color-key.under-par { color: #27ae60; }
+
 #boxplot-container {
   position: relative;
   width: 100%;

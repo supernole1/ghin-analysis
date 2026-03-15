@@ -92,6 +92,34 @@
         </div>
 
         <div id="subtab-detail" class="subtab-panel" hidden>
+          <div class="boxplot-explainer">
+            <div class="bp-legend-diagram" aria-hidden="true">
+              <svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+                <!-- whisker top cap -->
+                <line x1="30" y1="8"  x2="50" y2="8"  stroke="#333" stroke-width="1.5"/>
+                <!-- whisker top line -->
+                <line x1="40" y1="8"  x2="40" y2="22" stroke="#333" stroke-width="1.5"/>
+                <!-- box Q1-Q3 -->
+                <rect x="25" y="22" width="30" height="46" fill="rgba(192,57,43,0.6)" stroke="#c0392b" stroke-width="1.5"/>
+                <!-- median line -->
+                <line x1="25" y1="45" x2="55" y2="45" stroke="#16213e" stroke-width="2.5"/>
+                <!-- whisker bottom line -->
+                <line x1="40" y1="68" x2="40" y2="78" stroke="#333" stroke-width="1.5"/>
+                <!-- whisker bottom cap -->
+                <line x1="30" y1="78" x2="50" y2="78" stroke="#333" stroke-width="1.5"/>
+                <!-- outlier dot -->
+                <circle cx="40" cy="86" r="3" fill="#555"/>
+              </svg>
+            </div>
+            <dl class="bp-legend-labels">
+              <div><dt class="bp-swatch" style="background:#333;height:2px;width:16px;margin-top:6px;border-radius:1px"></dt><dd>Whisker — most extreme non-outlier score</dd></div>
+              <div><dt class="bp-swatch" style="background:rgba(192,57,43,0.6);border:1.5px solid #c0392b;height:14px;width:16px;border-radius:2px"></dt><dd>Box — middle 50% of scores (Q1 to Q3)</dd></div>
+              <div><dt class="bp-swatch" style="background:#16213e;height:3px;width:16px;margin-top:5px;border-radius:1px"></dt><dd>Median score</dd></div>
+              <div><dt class="bp-dot"></dt><dd>Outlier — unusually high or low score</dd></div>
+              <div><dt class="bp-color-key over-par">red</dt><dd>Median over par</dd></div>
+              <div><dt class="bp-color-key under-par">green</dt><dd>Median under par</dd></div>
+            </dl>
+          </div>
           <div id="boxplot-container">
             <canvas id="boxplot-chart"></canvas>
           </div>

@@ -674,8 +674,8 @@ const boxPlotPlugin = {
       const hw = bar.width / 2;
       const cw = hw / 2;
 
-      // Median line (white so it contrasts with box fill)
-      ctx.strokeStyle = '#fff';
+      // Median line — dark navy for contrast against the colored box
+      ctx.strokeStyle = '#16213e';
       ctx.lineWidth = 2.5;
       const yMed = yScale.getPixelForValue(d.median);
       ctx.beginPath(); ctx.moveTo(x - hw, yMed); ctx.lineTo(x + hw, yMed); ctx.stroke();

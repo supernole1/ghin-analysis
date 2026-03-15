@@ -206,6 +206,13 @@ select {
 
 .tab-panel[hidden] { display: none; }
 
+.tab-note {
+  font-size: 0.78rem;
+  color: #888;
+  font-style: italic;
+  margin-bottom: 1rem;
+}
+
 /* Round distribution panel */
 #round-dist-panel {
   margin-bottom: 1.5rem;
